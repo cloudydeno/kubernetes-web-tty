@@ -45,6 +45,10 @@ async function startTty(clientWs: WebSocket) {
 
   clientToServer.readable.pipeTo(serverConn.writable);
 
+  clientWs.send(JSON.stringify({
+    msg: 'ready',
+  }));
+
   for await (const pkt of serverConn.readable) {
     if (pkt instanceof Uint8Array) {
       clientWs.send(pkt.slice(1));
@@ -79,9 +83,10 @@ const handler = (req: Request) => {
   if (pathname === '/') return html({
     title: "Hello World!",
     styles: [
+      "* { box-sizing: border-box; }",
       "html, body { margin: 0; height: 100%; }",
-      "body { background: #86efac; display: flex; flex-direction: column; align-items: center; justify-content: center; }",
-      "#terminal { margin-top: 1em; padding: 0.5em; background-color: black; border-radius: 10px; }",
+      "body { padding: 1em; gap: 1em; background: #86efac; display: flex; flex-direction: column; align-items: center; justify-content: center; }",
+      "#terminal { flex: 1; padding: 0.5em; background-color: black; border-radius: 10px; width: 100%; }",
     ],
     links: [{
       href: 'https://unpkg.dev/xterm@5.2.1/css/xterm.css',
@@ -115,7 +120,6 @@ const handler = (req: Request) => {
               ws.send(new TextEncoder().encode(data));
             });
             term.onResize(size => {
-              console.log('resize:', {size});
               ws.send(JSON.stringify({
                 msg: 'resize',
                 size,
@@ -124,13 +128,16 @@ const handler = (req: Request) => {
 
             term.open(document.getElementById('terminal'));
             fitAddon.fit();
+            addEventListener("resize", () => {
+              fitAddon.fit();
+            });
           });
         });
       `,
     }],
     body: (
       <body>
-        <img width="64" src="https://dash.deno.com/assets/logo.svg" />
+        <img width="64" height="64" src="https://dash.deno.com/assets/logo.svg" />
         <div id="terminal"></div>
       </body>
     ),
